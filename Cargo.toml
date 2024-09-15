@@ -1,0 +1,8 @@
+[package]
+name = "httprust"
+version = "0.1.0"
+authors = ["Luis Carlos Navarro Todd <luiscatodd@gmail.com>", "Victoria Sandi Barrantes <>", "Naomi Ilama Gamboa"]
+
+
+[dependencies]
+rand = "0.7.3"
