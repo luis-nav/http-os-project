@@ -1,7 +1,7 @@
 [package]
 name = "httprust"
 version = "0.1.0"
-authors = ["Luis Carlos Navarro Todd <luiscatodd@gmail.com>", "Victoria Sandi Barrantes <>", "Naomi Ilama Gamboa"]
+authors = ["Luis Carlos Navarro Todd <luiscatodd@gmail.com>", "Victoria Sandi Barrantes <vickysandi2406@gmail.com>", "Naomi Ilama Gamboa"]
 
 
 [dependencies]
