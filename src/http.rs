@@ -66,5 +66,6 @@ impl HttpServer{
             }
         }
 
+        println!("Shutting down.");
     }
 }
