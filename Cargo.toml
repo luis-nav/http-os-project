@@ -6,3 +6,5 @@ authors = ["Luis Carlos Navarro Todd <luiscatodd@gmail.com>", "Victoria Sandi Ba
 
 [dependencies]
 rand = "0.7.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
