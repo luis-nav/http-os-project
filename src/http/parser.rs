@@ -1,7 +1,8 @@
+// Imports
 use std::collections::HashMap;
 extern crate serde_json;
 
-/// Representa una petición HTTP.
+// Struct de Request
 #[derive(Debug)]
 pub struct Request {
     pub method: String,
@@ -10,7 +11,7 @@ pub struct Request {
     pub body: Option<Body>,
 }
 
-/// Representa una respuesta HTTP.
+// Struct de Response
 #[derive(Debug)]
 pub struct Response {
     pub status_code: u16,
@@ -18,24 +19,24 @@ pub struct Response {
     pub body: Option<String>,
 }
 
-/// Enum para manejar diferentes tipos de bodies.
+/// Enum para manejar tipos del body
 #[derive(Debug)]
 pub enum Body {
     Text(String),
     Json(serde_json::Value),
 }
 
-/// Parser para convertir una petición HTTP cruda en un objeto `Request`.
+// Parser: convertirte un request HTTP en un objeto Request
 pub fn parse_request(request: &str) -> Result<Request, String> {
     let mut lines = request.lines();
     let start_line = lines
         .next()
-        .ok_or("Petición vacía")?
+        .ok_or("[Error]: Empty petition")?
         .split_whitespace()
         .collect::<Vec<&str>>();
 
     if start_line.len() < 3 {
-        return Err("Línea inicial inválida".to_string());
+        return Err("[Error]: Invalid initial line".to_string());
     }
 
     let method = start_line[0].to_string();
@@ -44,7 +45,7 @@ pub fn parse_request(request: &str) -> Result<Request, String> {
     let mut headers = HashMap::new();
     for line in lines.by_ref() {
         if line.is_empty() {
-            break; // Detecta el final de los encabezados
+            break;
         }
 
         let parts: Vec<&str> = line.splitn(2, ": ").collect();
@@ -53,7 +54,7 @@ pub fn parse_request(request: &str) -> Result<Request, String> {
         }
     }
 
-    // Determina el tamaño del cuerpo si `Content-Length` está presente
+    // Determina el tamaño del cuerpo si Content-Length está
     let content_length = headers
         .get("Content-Length")
         .and_then(|v| v.parse::<usize>().ok())
@@ -86,7 +87,7 @@ pub fn parse_request(request: &str) -> Result<Request, String> {
     })
 }
 
-/// Función para crear una respuesta básica.
+// Función para crear un response
 pub fn create_response(status_code: u16, body: Option<String>) -> Response {
     let mut headers = HashMap::new();
     if let Some(ref body) = body {

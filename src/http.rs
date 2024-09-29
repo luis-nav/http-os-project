@@ -1,3 +1,4 @@
+// Imports
 use std::{
     fs,
     collections::HashMap,
@@ -7,32 +8,34 @@ use std::{
 
 pub mod pool;
 use crate::http::pool::ThreadPool;
-pub mod parser; // Importa el módulo del parser
+pub mod parser;
 use crate::http::parser::{parse_request, create_response, Response};
 
+
+// Función para manejar las conecciones
 fn handle_connection(mut stream: TcpStream) {
     let mut buf_reader = BufReader::new(&mut stream);
     let mut headers = String::new();
 
-    // Leer los encabezados línea por línea
+    // Lectura de headers (línea por línea)
     loop {
         let mut line = String::new();
         match buf_reader.read_line(&mut line) {
             Ok(0) => break, // Conexión cerrada por el cliente
             Ok(_) => {
-                if line == "\r\n" {
-                    break; // Detecta el final de los encabezados HTTP
+                if line == "\r\n" { // Cuando se llega al final de los encabezados
+                    break;
                 }
                 headers.push_str(&line);
             }
             Err(e) => {
-                eprintln!("Error al leer del stream: {}", e);
+                eprintln!("[Error]: Error reading from stream: {}", e);
                 return;
             }
         }
     }
 
-    // Analiza el tamaño del cuerpo si `Content-Length` está presente
+    // Analiza el tamaño del cuerpo si Content-Length está
     let content_length = headers
         .lines()
         .find_map(|line| {
@@ -44,13 +47,13 @@ fn handle_connection(mut stream: TcpStream) {
         })
         .unwrap_or(0);
 
-    // Leer el cuerpo del mensaje si es necesario
+    // Lectura del body en el caso de ser necesario
     let mut body = vec![0; content_length];
     if content_length > 0 {
         buf_reader.read_exact(&mut body).unwrap();
     }
 
-    // Combina encabezados y cuerpo para parsear la solicitud completa
+    // Combina headers y body para parsear la solicitud completa
     let request_str = format!("{}{}", headers, String::from_utf8_lossy(&body));
 
     // Intenta parsear la solicitud
@@ -58,7 +61,7 @@ fn handle_connection(mut stream: TcpStream) {
         Ok(request) => {
             println!("Request Parsed: {:?}", request);
 
-            // Crea una respuesta de ejemplo
+            // Respuesta de ejemplo (Cambiar)
             let response = create_response(200, Some("Hello, World!".to_string()));
 
             // Envía la respuesta al cliente
@@ -74,7 +77,7 @@ fn handle_connection(mut stream: TcpStream) {
         }
         Err(e) => {
             // Si hay un error al parsear, envía un error 400
-            let response = create_response(400, Some(format!("Error parsing request: {}", e)));
+            let response = create_response(400, Some(format!("[Error]: Error parsing request: {}", e)));
             let response_str = format!(
                 "HTTP/1.1 {} Bad Request\r\nContent-Length: {}\r\n\r\n{}",
                 response.status_code,
@@ -88,7 +91,7 @@ fn handle_connection(mut stream: TcpStream) {
     }
 }
 
-/// Formatea un `Response` en un string para enviar.
+/// Formatea un Respone en un string para enviar
 fn format_response(response: &Response) -> String {
     let status_line = match response.status_code {
         200 => "HTTP/1.1 200 OK",
@@ -112,7 +115,6 @@ fn format_response(response: &Response) -> String {
     )
 }
 
-// Resto del código del servidor...
 pub struct HttpServer;
 
 impl HttpServer {
