@@ -126,7 +126,7 @@ impl HttpServer {
         let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).unwrap();
         assert_eq!(
             listener.local_addr().unwrap(),
-            SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), 8080)),
+            SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), port)),
             "[Error]: Could not open the server at the specified port"
         );
         (cb)();
