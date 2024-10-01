@@ -40,49 +40,59 @@ pub fn parse_request(request: &str) -> Result<Request, String> {
     }
 
     let method = start_line[0].to_string();
-    let path = start_line[1].to_string();
-
+    let mut path = start_line[1].to_string();
+    
     let mut headers = HashMap::new();
     for line in lines.by_ref() {
         if line.is_empty() {
             break;
         }
-
+        
         let parts: Vec<&str> = line.splitn(2, ": ").collect();
         if parts.len() == 2 {
             headers.insert(parts[0].to_string(), parts[1].to_string());
         }
     }
-
+    
     // Determina el tamaño del cuerpo si Content-Length está
     let content_length = headers
-        .get("Content-Length")
-        .and_then(|v| v.parse::<usize>().ok())
-        .unwrap_or(0);
+    .get("Content-Length")
+    .and_then(|v| v.parse::<usize>().ok())
+    .unwrap_or(0);
 
-    let mut body = lines.collect::<Vec<&str>>().join("\n");
-    if body.len() > content_length {
-        body.truncate(content_length); // Trunca el cuerpo según Content-Length
-    }
+let mut body = lines.collect::<Vec<&str>>().join("\n");
+if body.len() > content_length {
+    body.truncate(content_length); // Trunca el cuerpo según Content-Length
+}
 
-    let body = if body.trim().is_empty() {
-        None
-    } else {
-        match headers.get("Content-Type") {
-            Some(content_type) if content_type.contains("application/json") => {
-                match serde_json::from_str(&body) {
-                    Ok(json) => Some(Body::Json(json)),
-                    Err(_) => return Err("Error al parsear el JSON".to_string()),
-                }
+let body = if body.trim().is_empty() {
+    None
+} else {
+    match headers.get("Content-Type") {
+        Some(content_type) if content_type.contains("application/json") => {
+            match serde_json::from_str(&body) {
+                Ok(json) => Some(Body::Json(json)),
+                Err(_) => return Err("Error al parsear el JSON".to_string()),
             }
-            _ => Some(Body::Text(body)),
         }
-    };
+        _ => Some(Body::Text(body)),
+    }
+};
 
-    Ok(Request {
-        method,
-        path,
-        headers,
+match headers.get("Host") {
+    Some(host) => 
+        match path.find(host) {
+            Some(found) => {path = path.split_off(found+host.len());},
+            _ => {path = "ERR".to_string();}
+        },
+        _ => {path = "ERR".to_string();}
+}
+
+
+Ok(Request {
+    method,
+    path,
+    headers,
         body,
     })
 }
