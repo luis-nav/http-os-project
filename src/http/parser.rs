@@ -78,14 +78,13 @@ let body = if body.trim().is_empty() {
         _ => Some(Body::Text(body)),
     }
 };
-
 match headers.get("Host") {
     Some(host) => 
         match path.find(host) {
             Some(found) => {path = path.split_off(found+host.len());},
-            _ => {path = "ERR".to_string();}
+            _ => {}
         },
-        _ => {path = "ERR".to_string();}
+        _ => {}
 }
 
 

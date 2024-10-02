@@ -87,7 +87,6 @@ fn handle_connection(mut stream: TcpStream, controllers: &HashMap<RouterKey, Con
         Ok(request) => {
             println!("Request Parsed: {:?}", request);
 
-            //TODO: ROUTING
             let key = RouterKey { path: request.path.clone(), method: request.method.clone() };
 
             let controller = (controllers).get(&key);
@@ -135,10 +134,34 @@ pub struct HttpServer {
 }
 
 impl HttpServer {
-    pub fn new(pool_size: usize, router: HashMap<RouterKey, Controller>) -> HttpServer {
-        HttpServer { pool: ThreadPool::new(pool_size), router }
+    // Constructor
+    pub fn new(pool_size: usize) -> HttpServer {
+        HttpServer { pool: ThreadPool::new(pool_size), router: HashMap::new() }
     }
 
+    // Add routes with controllers
+    pub fn get(&mut self, path: &str, controller: Controller) {
+        let key = RouterKey { path: path.to_string(), method: "GET".to_string() };
+        self.router.insert(key, controller);
+    }
+    pub fn post(&mut self, path: &str, controller: Controller) {
+        let key = RouterKey { path: path.to_string(), method: "POST".to_string() };
+        self.router.insert(key, controller);
+    }
+    pub fn put(&mut self, path: &str, controller: Controller) {
+        let key = RouterKey { path: path.to_string(), method: "PUT".to_string() };
+        self.router.insert(key, controller);
+    }
+    pub fn patch(&mut self, path: &str, controller: Controller) {
+        let key = RouterKey { path: path.to_string(), method: "PATCH".to_string() };
+        self.router.insert(key, controller);
+    }
+    pub fn delete(&mut self, path: &str, controller: Controller) {
+        let key = RouterKey { path: path.to_string(), method: "DELETE".to_string() };
+        self.router.insert(key, controller);
+    }
+
+    // Start listening to ports
     pub fn listen(&self, port: u16, mut cb: impl FnMut() + 'static) {
         let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).unwrap();
         assert_eq!(
