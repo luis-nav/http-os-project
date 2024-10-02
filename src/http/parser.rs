@@ -60,40 +60,40 @@ pub fn parse_request(request: &str) -> Result<Request, String> {
     .and_then(|v| v.parse::<usize>().ok())
     .unwrap_or(0);
 
-let mut body = lines.collect::<Vec<&str>>().join("\n");
-if body.len() > content_length {
-    body.truncate(content_length); // Trunca el cuerpo según Content-Length
-}
-
-let body = if body.trim().is_empty() {
-    None
-} else {
-    match headers.get("Content-Type") {
-        Some(content_type) if content_type.contains("application/json") => {
-            match serde_json::from_str(&body) {
-                Ok(json) => Some(Body::Json(json)),
-                Err(_) => return Err("[Error]: Error parsing JSON".to_string()),
-            }
-        }
-        _ => Some(Body::Text(body)),
+    let mut body = lines.collect::<Vec<&str>>().join("\n");
+    if body.len() > content_length {
+        body.truncate(content_length); // Trunca el cuerpo según Content-Length
     }
-};
-match headers.get("Host") {
-    Some(host) => 
-        match path.find(host) {
-            Some(found) => {path = path.split_off(found+host.len());},
+
+    let body = if body.trim().is_empty() {
+        None
+    } else {
+        match headers.get("Content-Type") {
+            Some(content_type) if content_type.contains("application/json") => {
+                match serde_json::from_str(&body) {
+                    Ok(json) => Some(Body::Json(json)),
+                    Err(_) => return Err("[Error]: Error parsing JSON".to_string()),
+                }
+            }
+            _ => Some(Body::Text(body)),
+        }
+    };
+    match headers.get("Host") {
+        Some(host) => 
+            match path.find(host) {
+                Some(found) => {path = path.split_off(found+host.len());},
+                _ => {}
+            },
             _ => {}
-        },
-        _ => {}
-}
+    }
 
 
-Ok(Request {
-    method,
-    path,
-    headers,
-        body,
-    })
+    Ok(Request {
+        method,
+        path,
+        headers,
+            body,
+        })
 }
 
 // Función para crear un response

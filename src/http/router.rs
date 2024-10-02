@@ -1,19 +1,9 @@
 use crate::http::parser::{Request, Response};
 
+// Tipo para las funciones controladoras de cada ruta
 pub type Controller = fn(Request) -> Response;
-// pub type Controller = Box<dyn FnMut()>;
 
-// struct Route {
-//     controller: impl FnMut() + 'static,
-//     path: String
-// }
-
-// impl Route {
-//     fn new(controller: impl FnMut() + 'static, path: String) -> Route {
-//         Route { controller, path }
-//     }
-// }
-
+// Lave para el hashmap que mapea [path, method] => controller
 #[derive(PartialEq, Eq, Hash, Clone)]
 pub struct RouterKey{
     pub path: String,
