@@ -72,7 +72,7 @@ let body = if body.trim().is_empty() {
         Some(content_type) if content_type.contains("application/json") => {
             match serde_json::from_str(&body) {
                 Ok(json) => Some(Body::Json(json)),
-                Err(_) => return Err("Error al parsear el JSON".to_string()),
+                Err(_) => return Err("[Error]: Error parsing JSON".to_string()),
             }
         }
         _ => Some(Body::Text(body)),
