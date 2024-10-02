@@ -163,21 +163,30 @@ impl HttpServer {
 
     // Start listening to ports
     pub fn listen(&self, port: u16, mut cb: impl FnMut() + 'static) {
+        // Un Listener TCP para el puerto indicado
         let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).unwrap();
+        // Se hace un assert para ver si el listener esta en el puerto que se indicó
         assert_eq!(
             listener.local_addr().unwrap(),
             SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), port)),
             "[Error]: Could not open the server at the specified port"
         );
+        // Correr el callback de que se logro abrir el puerto
         (cb)();
 
+        // Main listener loop
         for stream in listener.incoming() {
             match stream {
+                // Caso de recibir un stream al puerto
                 Ok(stream) => {
+                    // Duplicacion de controllers para cada thread 
+                    // No se puede pasar directamente los controllers por políticas estrictas de contexto de Rust
                     let mut controllers: HashMap<RouterKey, Controller> = HashMap::new();
                     controllers.clear();
                     controllers.extend(self.router.clone().into_iter());
-                    println!("Connection Established");
+
+                    println!("[Log]: Connection Established");
+                    // Ejecutar el handler de las conexiones en uno de los threads del pool
                     self.pool.execute( move || {
                         handle_connection(stream, &controllers);
                     });
