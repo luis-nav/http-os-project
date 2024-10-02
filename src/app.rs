@@ -4,9 +4,16 @@ use std::collections::HashMap;
 extern crate lazy_static;
 use app::lazy_static::lazy_static;
 
+#[derive(Clone)]
+struct Message {
+    id: u32,
+    content: String,
+    username: String,
+}
+
 // Variable global (con Arc, RwLock y lazy_static)
 lazy_static! {
-    static ref MESSAGES: Arc<RwLock<HashMap<u32, String>>> = Arc::new(RwLock::new(HashMap::new()));
+    static ref MESSAGES: Arc<RwLock<HashMap<u32, Message>>> = Arc::new(RwLock::new(HashMap::new()));
 }
 
 // Variable global para el id (con AtomicU32)
@@ -15,31 +22,34 @@ lazy_static! {
 }
 
 // Función para leer todos los mensajes de la variable global
-fn get_messages() -> Vec<(u32, String)> {
+fn get_messages() -> Vec<Message> {
     let messages = MESSAGES.read().unwrap(); // Bloquea para lectura
-    messages.iter().map(|(&id, message)| (id, message.clone())).collect() // Devuelve una copia de los mensajes
+    messages.iter()
+        .map(|(&id, message)| Message { id, content: message.content.clone(), username: message.username.clone() })
+        .collect() // Devuelve una copia de los mensajes
 }
 
 // Función para leer un mensaje por id
-fn get_message(id: u32) -> Option<String> {
+fn get_message(id: u32) -> Option<Message> {
     let messages = MESSAGES.read().unwrap(); // Bloquea para lectura
     messages.get(&id).cloned() // Devuelve una copia del valor
 }
 
 // Función para escribir datos en la variable global
-fn add_message(message: String) -> u32 {
+fn add_message(content: String, username: String) -> u32 {
     let id = get_next_id(); // Obtiene un nuevo id
     let mut messages = MESSAGES.write().unwrap(); // Bloquea para escritura
+    let message = Message { id, content, username }; // Crea el nuevo mensaje
     messages.insert(id, message); // Inserta el mensaje
     id
 }
 
 // Función para actualizar un mensaje por id
-fn edit_message(id: u32, new_message: String) -> Result<String, String> {
+fn edit_message(id: u32, new_content: String) -> Result<String, String> {
     let mut messages = MESSAGES.write().unwrap(); // Bloquea para escritura
     
-    if messages.contains_key(&id) { // Actualiza el mensaje si existe
-        messages.insert(id, new_message.clone());
+    if let Some(message) = messages.get_mut(&id) { // Actualiza el mensaje si existe
+        message.content = new_content.clone();
         Ok(format!("Message with ID {} updated", id))
     } else {
         Err(format!("Message with ID {} not found", id))
@@ -79,7 +89,7 @@ pub fn get_messages_controller(_req: Request) -> Response {
     let messages = get_messages(); // Llamada a get_messages()
     let body = messages
         .iter()
-        .map(|(id, message)| format!("{}: {}", id, message))
+        .map(|message| format!("{}: {} (by {})", message.id, message.content, message.username))
         .collect::<Vec<String>>()
         .join("\n");
 
@@ -93,7 +103,7 @@ pub fn get_message_by_id_controller(req: Request) -> Response {
                         .unwrap_or(0); // Parsing del id
 
     if let Some(message) = get_message(id) { // Llamada a get_message()
-        create_response(200, Some(message))
+        create_response(200, Some(format!("{}: {} (by {})", message.id, message.content, message.username)))
     } else {
         create_response(404, Some("Message not found".to_string()))
     }
@@ -101,15 +111,22 @@ pub fn get_message_by_id_controller(req: Request) -> Response {
 
 // Controller para postear un mensaje
 pub fn post_message_controller(req: Request) -> Response {
-    let message = match req.body {
-        Some(Body::Text(ref text)) => text.clone(),
+    let (content, username) = match req.body {
+        Some(Body::Text(ref text)) => {
+            let parts: Vec<&str> = text.splitn(2, '|').collect();
+            if parts.len() == 2 {
+                (parts[1].to_string(), parts[0].to_string())
+            } else {
+                return create_response(400, Some("Invalid request body".to_string()));
+            }
+        }
         _ => return create_response(400, Some("Invalid request body".to_string())),
     };
 
-    let id = add_message(message.clone()); // Llamada a add_message()
+    let id = add_message(content.clone(), username.clone()); // Llamada a add_message()
 
-    println!("New message created with ID: {}", id);
-    create_response(201, Some(format!("Message created with ID: {}", id)))
+    println!("New message created with ID: {} by user: {}", id, username);
+    create_response(201, Some(format!("Message created with ID: {} by user: {}", id, username)))
 }
 
 // Controller para editar un mensaje
@@ -123,7 +140,7 @@ pub fn edit_message_controller(req: Request) -> Response {
         _ => return create_response(400, Some("Invalid request body".to_string())),
     };
 
-    match edit_message(id, new_message) { // Llamada a update_message()
+    match edit_message(id, new_message) { // Llamada a edit_message()
         Ok(success_msg) => create_response(200, Some(success_msg)),
         Err(err_msg) => create_response(404, Some(err_msg)),
     }
