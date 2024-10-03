@@ -1,6 +1,5 @@
 // Imports
 use std::{
-    fs,
     collections::HashMap,
     io::{prelude::*, BufReader, Read, Write},
     net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener, TcpStream},

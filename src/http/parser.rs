@@ -9,6 +9,7 @@ pub struct Request {
     pub path: String,
     pub headers: HashMap<String, String>,
     pub body: Option<Body>,
+    pub params: HashMap<String, String>
 }
 
 // Struct de Response
@@ -78,6 +79,7 @@ pub fn parse_request(request: &str) -> Result<Request, String> {
             _ => Some(Body::Text(body)),
         }
     };
+    // Filtrar el nombre del host del path
     match headers.get("Host") {
         Some(host) => 
             match path.find(host) {
@@ -86,13 +88,35 @@ pub fn parse_request(request: &str) -> Result<Request, String> {
             },
             _ => {}
     }
+    
+    // Filtrar y almacenar request params
+    let mut params: HashMap<String, String> = HashMap::new();
+    match path.find("?") {
+        Some(found_idx) => {
+            let mut params_str = path.split_off(found_idx);
+            params_str = if params_str.len() > 2 {
+                params_str.split_off(1)
+            } else {
+                String::from("")
+            };
+            for param_str in params_str.split('&') {
+                let param_tuple = param_str.split_once('=');
+                match param_tuple {
+                    Some(param) => {params.insert(param.0.to_string(), param.1.to_string());},
+                    _ => {}
+                }
+            }
+        },
+        _ => {}
+    }
 
 
     Ok(Request {
         method,
         path,
         headers,
-            body,
+        body,
+        params
         })
 }
 
