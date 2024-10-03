@@ -23,7 +23,7 @@ fn handle_connection(mut stream: TcpStream, controllers: &HashMap<RouterKey, Con
         match buf_reader.read_line(&mut line) {
             Ok(0) => break, // Conexión cerrada por el cliente
             Ok(_) => {
-                if line == "\r\n" { // Cuando se llega al final de los encabezados
+                if line.trim().is_empty() { // Cuando se llega al final de los encabezados
                     break;
                 }
                 headers.push_str(&line);
@@ -54,7 +54,7 @@ fn handle_connection(mut stream: TcpStream, controllers: &HashMap<RouterKey, Con
     }
 
     // Combina headers y body para parsear la solicitud completa
-    let request_str = format!("{}{}", headers, String::from_utf8_lossy(&body));
+    let request_str = format!("{}\r\n{}", headers, String::from_utf8_lossy(&body));
 
     // Intenta parsear la solicitud
     match parse_request(&request_str) {
@@ -85,8 +85,8 @@ fn handle_connection(mut stream: TcpStream, controllers: &HashMap<RouterKey, Con
             let response_str = format!(
                 "HTTP/1.1 {} OK\r\nContent-Length: {}\r\n{}\r\n{}",
                 response.status_code,
-                cookies_str,
                 response.body.as_ref().map(|b| b.len()).unwrap_or(0),
+                cookies_str,
                 response.body.unwrap_or_default()
             );
 

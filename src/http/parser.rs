@@ -47,7 +47,7 @@ pub fn parse_request(request: &str) -> Result<Request, String> {
     
     let mut headers = HashMap::new();
     for line in lines.by_ref() {
-        if line.is_empty() {
+        if line.trim().is_empty() {
             break;
         }
         
