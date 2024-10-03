@@ -12,6 +12,9 @@ use crate::http::parser::{parse_request, create_response, Response};
 pub mod router;
 use crate::http::router::{Controller, RouterKey};
 
+<<<<<<< HEAD
+// Función para manejar las conexiones
+=======
 
 /// Formatea un Respone en un string para enviar
 fn format_response(response: &Response) -> String {
@@ -47,6 +50,7 @@ fn format_response(response: &Response) -> String {
 }
 
     // Función para manejar las conecciones
+>>>>>>> 5c30c257045761233c40b652517c47a81908141b
 fn handle_connection(mut stream: TcpStream, controllers: &HashMap<RouterKey, Controller>) {
     let mut buf_reader = BufReader::new(&mut stream);
     let mut headers = String::new();
@@ -108,11 +112,18 @@ fn handle_connection(mut stream: TcpStream, controllers: &HashMap<RouterKey, Con
 
             // Respuesta de ejemplo (Cambiar)
             // let response = create_response(200, Some("Hello, World!".to_string()));
-
+            let mut cookies_str = String::from("");
+            if let Some(cookies) = &response.cookies {
+                for (key, value) in cookies.iter() {
+                    let cookie_str = format!("Set-Cookie: {}={}\r\n", key, value);
+                    cookies_str.push_str(&cookie_str);
+                } 
+            }
             // Envía la respuesta al cliente
             let response_str = format!(
-                "HTTP/1.1 {} OK\r\nContent-Length: {}\r\n\r\n{}",
+                "HTTP/1.1 {} OK\r\nContent-Length: {}\r\n{}\r\n{}",
                 response.status_code,
+                cookies_str,
                 response.body.as_ref().map(|b| b.len()).unwrap_or(0),
                 response.body.unwrap_or_default()
             );

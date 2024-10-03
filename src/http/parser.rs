@@ -136,3 +136,36 @@ pub fn create_response(status_code: u16, body: Option<String>) -> Response {
         cookies: None,
     }
 }
+
+/// Formatea un Respone en un string para enviar
+fn format_response(response: &Response) -> String {
+    let status_line = match response.status_code {
+        200 => "HTTP/1.1 200 OK",
+        404 => "HTTP/1.1 404 NOT FOUND",
+        400 => "HTTP/1.1 400 BAD REQUEST",
+        _ => "HTTP/1.1 500 INTERNAL SERVER ERROR",
+    };
+
+    let mut headers = response
+        .headers
+        .iter()
+        .map(|(k, v)| format!("{}: {}", k, v))
+        .collect::<Vec<String>>()
+        .join("\r\n");
+    
+    // Add cookies
+    if let Some(cookies) = &response.cookies {
+        for (key, value) in cookies.iter() {
+            let cookie_str = format!("Set-Cookie: {}={}\r\n", key, value);
+            headers.push_str(&cookie_str);
+        } 
+    }
+    
+
+    format!(
+        "{}\r\n{}\r\n\r\n{}",
+        status_line,
+        headers,
+        response.body.clone().unwrap_or_default()
+    )
+}

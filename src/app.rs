@@ -57,7 +57,7 @@ fn edit_existing_message(id: u32, new_content: String) -> Result<String, String>
 }
 
 // Función para eliminar datos de la variable global
-pub fn delete_message(id: u32) -> Result<String, String> {
+fn delete_message(id: u32) -> Result<String, String> {
     let mut messages = MESSAGES.write().unwrap(); // Bloquea para escritura
 
     if messages.remove(&id).is_some() { // Elimina el mensaje si existe
