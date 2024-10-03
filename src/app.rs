@@ -45,7 +45,7 @@ fn add_message(content: String, username: String) -> u32 {
 }
 
 // Función para actualizar un mensaje por id
-fn edit_message(id: u32, new_content: String) -> Result<String, String> {
+fn edit_existing_message(id: u32, new_content: String) -> Result<String, String> {
     let mut messages = MESSAGES.write().unwrap(); // Bloquea para escritura
     
     if let Some(message) = messages.get_mut(&id) { // Actualiza el mensaje si existe
@@ -130,7 +130,7 @@ pub fn post_message_controller(req: Request) -> Response {
 }
 
 // Controller para editar un mensaje
-pub fn edit_message_controller(req: Request) -> Response {
+pub fn edit_existing_message_controller(req: Request) -> Response {
     let id: u32 = req.path.trim_start_matches("/msg/")
                         .parse()
                         .unwrap_or(0); // Parsing del id
@@ -140,9 +140,23 @@ pub fn edit_message_controller(req: Request) -> Response {
         _ => return create_response(400, Some("Invalid request body".to_string())),
     };
 
-    match edit_message(id, new_message) { // Llamada a edit_message()
+    match edit_existing_message(id, new_message) { // Llamada a edit_message()
         Ok(success_msg) => create_response(200, Some(success_msg)),
         Err(err_msg) => create_response(404, Some(err_msg)),
+    }
+}
+
+// Controller para editar un mensaje
+pub fn edit_or_create_message_controller(req: Request) -> Response {
+    let id: u32 = req.path.trim_start_matches("/msg/")
+                        .parse()
+                        .unwrap_or(0); // Parsing del id
+
+    if id == 0 {
+        post_message_controller(req) // Si el id es 0, se llama a post_message_controller
+    }
+    else {
+        edit_existing_message_controller(req) // Si el id no es 0, se llama a edit_existing_message_controller
     }
 }
 
