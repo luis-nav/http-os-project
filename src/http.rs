@@ -12,32 +12,7 @@ use crate::http::parser::{parse_request, create_response, Response};
 pub mod router;
 use crate::http::router::{Controller, RouterKey};
 
-
-/// Formatea un Respone en un string para enviar
-fn format_response(response: &Response) -> String {
-    let status_line = match response.status_code {
-        200 => "HTTP/1.1 200 OK",
-        404 => "HTTP/1.1 404 NOT FOUND",
-        400 => "HTTP/1.1 400 BAD REQUEST",
-        _ => "HTTP/1.1 500 INTERNAL SERVER ERROR",
-    };
-
-    let headers = response
-        .headers
-        .iter()
-        .map(|(k, v)| format!("{}: {}", k, v))
-        .collect::<Vec<String>>()
-        .join("\r\n");
-
-    format!(
-        "{}\r\n{}\r\n\r\n{}",
-        status_line,
-        headers,
-        response.body.clone().unwrap_or_default()
-    )
-}
-
-    // Función para manejar las conecciones
+// Función para manejar las conexiones
 fn handle_connection(mut stream: TcpStream, controllers: &HashMap<RouterKey, Controller>) {
     let mut buf_reader = BufReader::new(&mut stream);
     let mut headers = String::new();
@@ -99,11 +74,18 @@ fn handle_connection(mut stream: TcpStream, controllers: &HashMap<RouterKey, Con
 
             // Respuesta de ejemplo (Cambiar)
             // let response = create_response(200, Some("Hello, World!".to_string()));
-
+            let mut cookies_str = String::from("");
+            if let Some(cookies) = &response.cookies {
+                for (key, value) in cookies.iter() {
+                    let cookie_str = format!("Set-Cookie: {}={}\r\n", key, value);
+                    cookies_str.push_str(&cookie_str);
+                } 
+            }
             // Envía la respuesta al cliente
             let response_str = format!(
-                "HTTP/1.1 {} OK\r\nContent-Length: {}\r\n\r\n{}",
+                "HTTP/1.1 {} OK\r\nContent-Length: {}\r\n{}\r\n{}",
                 response.status_code,
+                cookies_str,
                 response.body.as_ref().map(|b| b.len()).unwrap_or(0),
                 response.body.unwrap_or_default()
             );
