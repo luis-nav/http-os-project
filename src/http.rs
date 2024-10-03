@@ -22,12 +22,21 @@ fn format_response(response: &Response) -> String {
         _ => "HTTP/1.1 500 INTERNAL SERVER ERROR",
     };
 
-    let headers = response
+    let mut headers = response
         .headers
         .iter()
         .map(|(k, v)| format!("{}: {}", k, v))
         .collect::<Vec<String>>()
         .join("\r\n");
+    
+    // Add cookies
+    if let Some(cookies) = &response.cookies {
+        for (key, value) in cookies.iter() {
+            let cookie_str = format!("Set-Cookie: {}={}\r\n", key, value);
+            headers.push_str(&cookie_str);
+        } 
+    }
+    
 
     format!(
         "{}\r\n{}\r\n\r\n{}",

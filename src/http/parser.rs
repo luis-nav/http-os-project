@@ -9,7 +9,8 @@ pub struct Request {
     pub path: String,
     pub headers: HashMap<String, String>,
     pub body: Option<Body>,
-    pub params: HashMap<String, String>
+    pub params: HashMap<String, String>,
+    pub cookies: HashMap<String, String>,
 }
 
 // Struct de Response
@@ -18,6 +19,7 @@ pub struct Response {
     pub status_code: u16,
     pub headers: HashMap<String, String>,
     pub body: Option<String>,
+    pub cookies: Option<HashMap<String, String>>,
 }
 
 /// Enum para manejar tipos del body
@@ -80,44 +82,44 @@ pub fn parse_request(request: &str) -> Result<Request, String> {
         }
     };
     // Filtrar el nombre del host del path
-    match headers.get("Host") {
-        Some(host) => 
-            match path.find(host) {
-                Some(found) => {path = path.split_off(found+host.len());},
-                _ => {}
-            },
-            _ => {}
+    if let Some(host) = headers.get("Host") {
+        if let Some(found_idx) = path.find(host) {
+            path = path.split_off(found_idx+host.len());
+        }
     }
     
     // Filtrar y almacenar request params
     let mut params: HashMap<String, String> = HashMap::new();
-    match path.find("?") {
-        Some(found_idx) => {
-            let mut params_str = path.split_off(found_idx);
-            params_str = if params_str.len() > 2 {
-                params_str.split_off(1)
-            } else {
-                String::from("")
-            };
+    if let Some(found_idx) = path.find('?') {
+        let params_str = path.split_off(found_idx + 1);
+        if !params_str.is_empty() {
             for param_str in params_str.split('&') {
-                let param_tuple = param_str.split_once('=');
-                match param_tuple {
-                    Some(param) => {params.insert(param.0.to_string(), param.1.to_string());},
-                    _ => {}
+                if let Some((key, value)) = param_str.split_once('=') {
+                    params.insert(key.to_string(), value.to_string());
                 }
             }
-        },
-        _ => {}
+        }
     }
 
+    // Identificar cookies
+    let mut cookies: HashMap<String, String> = HashMap::new();
+    if let Some(cookies_str) = headers.get("Cookie") {
+        for cookie_str in cookies_str.split(';') {
+            let cookie_str = cookie_str.trim();
+            if let Some((key, value)) = cookie_str.split_once('=') {
+                cookies.insert(key.to_string(), value.to_string());
+            }
+        }
+    }
 
     Ok(Request {
         method,
         path,
         headers,
         body,
-        params
-        })
+        params,
+        cookies,
+    })
 }
 
 // Función para crear un response
@@ -131,5 +133,6 @@ pub fn create_response(status_code: u16, body: Option<String>) -> Response {
         status_code,
         headers,
         body,
+        cookies: None,
     }
 }
