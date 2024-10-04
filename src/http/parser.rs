@@ -123,7 +123,7 @@ pub fn parse_request(request: &str) -> Result<Request, String> {
 }
 
 // Función para crear un response
-pub fn create_response(status_code: u16, body: Option<String>) -> Response {
+pub fn create_response(status_code: u16, body: Option<String>, cookies: Option<HashMap<String, String>>) -> Response {
     let mut headers = HashMap::new();
     if let Some(ref body) = body {
         headers.insert("Content-Length".to_string(), body.len().to_string());
@@ -133,7 +133,7 @@ pub fn create_response(status_code: u16, body: Option<String>) -> Response {
         status_code,
         headers,
         body,
-        cookies: None,
+        cookies,
     }
 }
 

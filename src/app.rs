@@ -76,13 +76,24 @@ fn get_next_id() -> u32 {
 // Controller para el login
 pub fn login_controller(req: Request) -> Response {
     // Obtener el username desde las cookies
-    let username = match req.cookies.get("username") {
-        Some(name) => name.clone(),
-        None => return create_response(400, Some("Missing username in cookies".to_string())),
+    let username = match req.body {
+        Some(Body::Text(ref text)) => {
+            text.to_string()
+        }
+        Some(Body::Json(ref json_value)) => {
+            match json_value.get("username") {
+                Some(message) => message.as_str().unwrap_or("").to_string(),
+                None => return create_response(400, Some("Missing 'username' in JSON body".to_string()), None::<HashMap<String, String>>),
+            }
+        }
+        _ => return create_response(400, Some("Invalid request body".to_string()), None::<HashMap<String, String>>),
     };
+    let mut cookies:HashMap<String,String> = HashMap::new();
+    cookies.insert(String::from("username"), username.clone());
+
 
     println!("User logged in: {}", username);
-    create_response(200, Some(format!("Welcome, {}!", username)))
+    create_response(200, Some(format!("Welcome, {}!", username)), Some(cookies))
 }
 
 // Controller para obtener todos los mensajes
@@ -94,7 +105,7 @@ pub fn get_messages_controller(_req: Request) -> Response {
         .collect::<Vec<String>>()
         .join("\n");
 
-    create_response(200, Some(body))
+    create_response(200, Some(body), None::<HashMap<String, String>>)
 }
 
 // Controller para obtener mensaje por id
@@ -104,9 +115,9 @@ pub fn get_message_by_id_controller(req: Request) -> Response {
                             .unwrap_or(0); // Saca el id de los params, si no hay es 0
 
     if let Some(message) = get_message(id) { // Llamada a get_message()
-        create_response(200, Some(format!("{}: {} (by {})", message.id, message.content, message.username)))
+        create_response(200, Some(format!("{}: {} (by {})", message.id, message.content, message.username)), None::<HashMap<String, String>>)
     } else {
-        create_response(404, Some("Message not found".to_string()))
+        create_response(404, Some("Message not found".to_string()), None::<HashMap<String, String>>)
     }
 }
 
@@ -119,21 +130,21 @@ pub fn post_message_controller(req: Request) -> Response {
         Some(Body::Json(ref json_value)) => {
             match json_value.get("message") {
                 Some(message) => message.as_str().unwrap_or("").to_string(),
-                None => return create_response(400, Some("Missing 'message' in JSON body".to_string())),
+                None => return create_response(400, Some("Missing 'message' in JSON body".to_string()), None::<HashMap<String, String>>),
             }
         }
-        _ => return create_response(400, Some("Invalid request body".to_string())),
+        _ => return create_response(400, Some("Invalid request body".to_string()), None::<HashMap<String, String>>),
     };
 
     let username = match req.cookies.get("username") {
         Some(name) => name.clone(),
-        None => return create_response(400, Some("Missing username in cookies".to_string())),
+        None => return create_response(400, Some("Missing username in cookies".to_string()), None::<HashMap<String, String>>),
     };
 
     let id = add_message(content.clone(), username.clone()); // Llamada a add_message()
 
     println!("New message created with ID: {} by user: {}", id, username);
-    create_response(201, Some(format!("Message created with ID: {} by user: {}", id, username)))
+    create_response(201, Some(format!("Message created with ID: {} by user: {}", id, username)), None::<HashMap<String, String>>)
 }
 
 // Controller para editar un mensaje
@@ -149,15 +160,15 @@ pub fn edit_existing_message_controller(req: Request) -> Response {
         Some(Body::Json(ref json_value)) => {
             match json_value.get("message") {
                 Some(message) => message.as_str().unwrap_or("").to_string().clone(),
-                None => return create_response(400, Some("Missing 'message' in JSON body".to_string())),
+                None => return create_response(400, Some("Missing 'message' in JSON body".to_string()), None::<HashMap<String, String>>),
             }
         }
-        _ => return create_response(400, Some("Invalid request body".to_string())),
+        _ => return create_response(400, Some("Invalid request body".to_string()), None::<HashMap<String, String>>),
     };
 
     match edit_existing_message(id, new_message) { // Llamada a edit_message()
-        Ok(success_msg) => create_response(200, Some(success_msg)),
-        Err(err_msg) => create_response(404, Some(err_msg)),
+        Ok(success_msg) => create_response(200, Some(success_msg), None::<HashMap<String, String>>),
+        Err(err_msg) => create_response(404, Some(err_msg), None::<HashMap<String, String>>),
     }
 }
 
@@ -170,7 +181,7 @@ pub fn edit_or_create_message_controller(req: Request) -> Response {
     let messages = MESSAGES.read().unwrap(); // Bloquea para lectura
 
     if id == 0 { // Error si id = 0
-        return create_response(404, Some("Message not found".to_string())); // Respuesta 404 si id es 0
+        return create_response(404, Some("Message not found".to_string()), None::<HashMap<String, String>>); // Respuesta 404 si id es 0
     }
     if let Some(_message) = messages.get(&id) { // Busca el mensaje si existe, solo lectura
         std::mem::drop(messages);
@@ -189,7 +200,7 @@ pub fn delete_message_by_id_controller(req: Request) -> Response {
                             .unwrap_or(0); // Saca el id de los params, si no hay es 0
 
     match delete_message(id) { // Llamada a delete_message()
-        Ok(success_msg) => create_response(200, Some(success_msg)),
-        Err(err_msg) => create_response(404, Some(err_msg)),
+        Ok(success_msg) => create_response(200, Some(success_msg), None::<HashMap<String, String>>),
+        Err(err_msg) => create_response(404, Some(err_msg), None::<HashMap<String, String>>),
     }
 }

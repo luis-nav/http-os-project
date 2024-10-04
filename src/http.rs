@@ -69,7 +69,7 @@ fn handle_connection(mut stream: TcpStream, controllers: &HashMap<RouterKey, Con
 
             match controller {
                 Some(func) => response = (func)(request),
-                None => response = create_response(404, Some("[Error]: Route not found".to_string())),
+                None => response = create_response(404, Some("[Error]: Route not found".to_string()), None::<HashMap<String, String>>),
             }
 
             // Respuesta de ejemplo (Cambiar)
@@ -95,7 +95,7 @@ fn handle_connection(mut stream: TcpStream, controllers: &HashMap<RouterKey, Con
         }
         Err(e) => {
             // Si hay un error al parsear, envía un error 400
-            let response = create_response(400, Some(format!("[Error]: Error parsing request: {}", e)));
+            let response = create_response(400, Some(format!("[Error]: Error parsing request: {}", e)), None::<HashMap<String, String>>);
             let response_str = format!(
                 "HTTP/1.1 {} Bad Request\r\nContent-Length: {}\r\n\r\n{}",
                 response.status_code,
