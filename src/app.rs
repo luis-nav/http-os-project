@@ -75,9 +75,10 @@ fn get_next_id() -> u32 {
 
 // Controller para el login
 pub fn login_controller(req: Request) -> Response {
-    let username = match req.body {
-        Some(Body::Text(ref text)) => text.clone(),
-        _ => return create_response(400, Some("Invalid request body".to_string())),
+    // Obtener el username desde las cookies
+    let username = match req.cookies.get("username") {
+        Some(name) => name.clone(),
+        None => return create_response(400, Some("Missing username in cookies".to_string())),
     };
 
     println!("User logged in: {}", username);
@@ -98,9 +99,9 @@ pub fn get_messages_controller(_req: Request) -> Response {
 
 // Controller para obtener mensaje por id
 pub fn get_message_by_id_controller(req: Request) -> Response {
-    let id: u32 = req.path.trim_start_matches("/msg/")
-                        .parse()
-                        .unwrap_or(0); // Parsing del id
+    let id: u32 = req.params.get("id")
+                            .and_then(|id_str| id_str.parse::<u32>().ok()) // Intenta parsear el id
+                            .unwrap_or(0); // Saca el id de los params, si no hay es 0
 
     if let Some(message) = get_message(id) { // Llamada a get_message()
         create_response(200, Some(format!("{}: {} (by {})", message.id, message.content, message.username)))
@@ -111,16 +112,22 @@ pub fn get_message_by_id_controller(req: Request) -> Response {
 
 // Controller para postear un mensaje
 pub fn post_message_controller(req: Request) -> Response {
-    let (content, username) = match req.body {
+    let content = match req.body {
         Some(Body::Text(ref text)) => {
-            let parts: Vec<&str> = text.splitn(2, '|').collect();
-            if parts.len() == 2 {
-                (parts[1].to_string(), parts[0].to_string())
-            } else {
-                return create_response(400, Some("Invalid request body".to_string()));
+            text.to_string()
+        }
+        Some(Body::Json(ref json_value)) => {
+            match json_value.get("message") {
+                Some(message) => message.as_str().unwrap_or("").to_string(),
+                None => return create_response(400, Some("Missing 'message' in JSON body".to_string())),
             }
         }
         _ => return create_response(400, Some("Invalid request body".to_string())),
+    };
+
+    let username = match req.cookies.get("username") {
+        Some(name) => name.clone(),
+        None => return create_response(400, Some("Missing username in cookies".to_string())),
     };
 
     let id = add_message(content.clone(), username.clone()); // Llamada a add_message()
@@ -131,12 +138,20 @@ pub fn post_message_controller(req: Request) -> Response {
 
 // Controller para editar un mensaje
 pub fn edit_existing_message_controller(req: Request) -> Response {
-    let id: u32 = req.path.trim_start_matches("/msg/")
-                        .parse()
-                        .unwrap_or(0); // Parsing del id
+    let id: u32 = req.params.get("id")
+                            .and_then(|id_str| id_str.parse::<u32>().ok()) // Intenta parsear el id
+                            .unwrap_or(0); // Saca el id de los params, si no hay es 0
     
     let new_message = match req.body {
-        Some(Body::Text(ref text)) => text.clone(),
+        Some(Body::Text(ref text)) => {
+            text.clone()
+        }
+        Some(Body::Json(ref json_value)) => {
+            match json_value.get("message") {
+                Some(message) => message.as_str().unwrap_or("").to_string().clone(),
+                None => return create_response(400, Some("Missing 'message' in JSON body".to_string())),
+            }
+        }
         _ => return create_response(400, Some("Invalid request body".to_string())),
     };
 
@@ -148,23 +163,30 @@ pub fn edit_existing_message_controller(req: Request) -> Response {
 
 // Controller para editar un mensaje
 pub fn edit_or_create_message_controller(req: Request) -> Response {
-    let id: u32 = req.path.trim_start_matches("/msg/")
-                        .parse()
-                        .unwrap_or(0); // Parsing del id
+    let id: u32 = req.params.get("id")
+                            .and_then(|id_str| id_str.parse::<u32>().ok()) // Intenta parsear el id
+                            .unwrap_or(0); // Saca el id de los params, si no hay es 0
 
-    if id == 0 {
-        post_message_controller(req) // Si el id es 0, se llama a post_message_controller
+    let messages = MESSAGES.read().unwrap(); // Bloquea para lectura
+
+    if id == 0 { // Error si id = 0
+        return create_response(404, Some("Message not found".to_string())); // Respuesta 404 si id es 0
     }
-    else {
-        edit_existing_message_controller(req) // Si el id no es 0, se llama a edit_existing_message_controller
+    if let Some(_message) = messages.get(&id) { // Busca el mensaje si existe, solo lectura
+        std::mem::drop(messages);
+        return edit_existing_message_controller(req); // Llama al controlador para editar el mensaje
+    } else {
+        std::mem::drop(messages);
+        return post_message_controller(req); // Crea un nuevo mensaje si no existe
     }
 }
 
+
 // Controller para eliminar un mensaje
 pub fn delete_message_by_id_controller(req: Request) -> Response {
-    let id: u32 = req.path.trim_start_matches("/msg/")
-                        .parse()
-                        .unwrap_or(0);  // Parsing del id
+    let id: u32 = req.params.get("id")
+                            .and_then(|id_str| id_str.parse::<u32>().ok()) // Intenta parsear el id
+                            .unwrap_or(0); // Saca el id de los params, si no hay es 0
 
     match delete_message(id) { // Llamada a delete_message()
         Ok(success_msg) => create_response(200, Some(success_msg)),
